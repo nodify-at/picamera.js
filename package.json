@@ -1,16 +1,14 @@
 {
-  "name": "@nodify/picamera.js",
-  "version": "1.0.0",
+  "name": "@nodify_at/picamera.js",
+  "version": "1.0.1",
   "description": "High-performance, low-CPU camera capture module using picamera for Raspberry Pi",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "type": "module",
   "files": [
-    "lib/**/*",
+    "dist/**/*",
     "prebuilds/**/*",
     "binding.gyp",
-    "src/**/*",
-    "include/**/*",
     "README.md",
     "LICENSE"
   ],
@@ -24,11 +22,11 @@
     ]
   },
   "scripts": {
-    "build": "tsc && node-gyp rebuild",
+    "build": "tsc -p tsconfig.prod.json && node-gyp rebuild",
     "build:ts": "tsc -p tsconfig.prod.json",
     "build:native": "node-gyp rebuild",
-    "build:release": "tsc && node-gyp rebuild --release",
-    "clean": "node-gyp clean && rm -rf lib prebuilds",
+    "build:release": "tsc -p tsconfig.prod.json && node-gyp rebuild --release",
+    "clean": "node-gyp clean && rm -rf prebuilds",
     "configure": "node-gyp configure",
     "prebuild": "prebuild --runtime napi --target 9 --strip --verbose",
     "prebuild:upload": "prebuild --runtime napi --target 9 --strip --upload-all ${GITHUB_TOKEN}",

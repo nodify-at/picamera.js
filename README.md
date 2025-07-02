@@ -1,6 +1,6 @@
 # 📷 @nodify/picamera.js
 
-[![npm version](https://img.shields.io/npm/v/@nodify/picamera.js.svg)](https://www.npmjs.com/package/@nodify/picamera.js)
+[![npm version](https://img.shields.io/npm/v/@nodify_at/picamera.js.svg)](https://www.npmjs.com/package/@nodify_at/picamera.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/node/v/@nodify/picamera.js.svg)](https://nodejs.org)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%205-ff69b4.svg)](https://www.raspberrypi.com/)
