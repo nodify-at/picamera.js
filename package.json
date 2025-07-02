@@ -50,7 +50,7 @@
     "napi",
     "addon"
   ],
-  "author": "Your Name <your.email@example.com>",
+  "author": "Hasan Oezdemir <office@nodify.at>",
   "license": "MIT",
   "repository": {
     "type": "git",
