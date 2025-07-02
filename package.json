@@ -1,7 +1,7 @@
 {
   "name": "@nodify/picamera.js",
   "version": "1.0.0",
-  "description": "High-performance, low-CPU camera capture module using libcamera for Raspberry Pi",
+  "description": "High-performance, low-CPU camera capture module using picamera for Raspberry Pi",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "type": "module",
@@ -15,8 +15,7 @@
     "LICENSE"
   ],
   "binary": {
-    "module_name": "picamera",
-    "module_path": "./prebuilds/{platform}-{arch}/",
+    "module_name": "picamera.js",
     "host": "https://github.com/nodify-at/picamera.js/releases/download/",
     "remote_path": "v{version}",
     "package_name": "{module_name}-v{version}-{platform}-{arch}.tar.gz",
@@ -26,12 +25,11 @@
   },
   "scripts": {
     "build": "tsc && node-gyp rebuild",
-    "build:ts": "tsc",
+    "build:ts": "tsc -p tsconfig.prod.json",
     "build:native": "node-gyp rebuild",
     "build:release": "tsc && node-gyp rebuild --release",
     "clean": "node-gyp clean && rm -rf lib prebuilds",
     "configure": "node-gyp configure",
-    "test": "node lib/example.js",
     "prebuild": "prebuild --runtime napi --target 9 --strip --verbose",
     "prebuild:upload": "prebuild --runtime napi --target 9 --strip --upload-all ${GITHUB_TOKEN}",
     "prebuild:download": "prebuild-install --runtime napi || npm run build:native",
@@ -41,7 +39,7 @@
   },
   "keywords": [
     "camera",
-    "libcamera",
+    "picamera",
     "raspberry-pi",
     "raspberry-pi-5",
     "video",
@@ -56,16 +54,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/picamera.js.git"
+    "url": "git+https://github.com/nodify-at/picamera.js.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/picamera.js/issues"
+    "url": "https://github.com/nodify-at/picamera.js/issues"
   },
-  "homepage": "https://github.com/your-username/picamera.js#readme",
+  "homepage": "https://github.com/nodify-at/picamera.js#readme",
   "gypfile": true,
-  "os": [
-    "linux"
-  ],
   "cpu": [
     "arm64"
   ],
@@ -94,9 +89,6 @@
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.31.0"
-  },
-  "peerDependencies": {
-    "libcamera": ">=0.5.0"
   },
   "publishConfig": {
     "access": "public"

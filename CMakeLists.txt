@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(libcamera.js)
+project(picamera.js)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,7 +52,7 @@ target_link_libraries(${PROJECT_NAME}
 
 # Set output name to match binding.gyp
 set_target_properties(${PROJECT_NAME} PROPERTIES
-        OUTPUT_NAME "libcamera.js"
+        OUTPUT_NAME "picamera.js"
         PREFIX ""
         SUFFIX ".node"
 )
