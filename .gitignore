@@ -3,3 +3,4 @@ include
 cmake_build_debug
 .idea
 build
+dist
