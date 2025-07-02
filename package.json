@@ -1,6 +1,6 @@
 {
   "name": "@nodify_at/picamera.js",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "High-performance, low-CPU camera capture module using picamera for Raspberry Pi",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
