@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Stream</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .control-group { display: flex; align-items: center; gap: 8px; }
+        select, button, input {
+            padding: 8px 12px;
+            border: 1px solid #555;
+            background: #444;
+            color: white;
+            border-radius: 4px;
+        }
+        button:hover { background: #555; cursor: pointer; }
+        button:disabled { background: #222; color: #666; cursor: not-allowed; }
+        .video-container {
+            text-align: center;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .stat-group h4 {
+            margin: 0 0 10px 0;
+            color: #fff;
+            font-size: 16px;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .status.connected { background: #4CAF50; }
+        .status.disconnected { background: #f44336; }
+        .status.connecting { background: #ff9800; }
+        .placeholder {
+            padding: 100px 20px;
+            color: #666;
+            font-size: 18px;
+        }
+        .error-message {
+            background: #f44336;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .performance-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .performance-indicator.good { background: rgba(76, 175, 80, 0.9); }
+        .performance-indicator.warning { background: rgba(255, 152, 0, 0.9); }
+        .performance-indicator.bad { background: rgba(244, 67, 54, 0.9); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Camera Live Stream</h1>
+
+    <div class="error-message" id="errorMessage"></div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Server:</label>
+            <input type="text" id="serverUrl" placeholder="ws://localhost:8080" value="ws://localhost:8080">
+        </div>
+
+        <div class="control-group">
+            <label>Quality:</label>
+            <select id="quality">
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>FPS:</label>
+            <select id="fps">
+                <option value="30">30 FPS</option>
+                <option value="24">24 FPS</option>
+                <option value="15">15 FPS</option>
+                <option value="10">10 FPS</option>
+                <option value="5">5 FPS</option>
+            </select>
+        </div>
+
+        <button id="toggleStream">Start Stream</button>
+        <div class="status disconnected" id="status">Disconnected</div>
+    </div>
+
+    <div class="video-container">
+        <img id="stream" style="display: none;" alt="Camera Stream" />
+        <div class="performance-indicator" id="perfIndicator" style="display: none;">
+            <span id="perfFps">--</span> FPS
+        </div>
+        <div id="placeholder" class="placeholder">
+            Enter server URL and click "Start Stream" to begin
+        </div>
+    </div>
+
+    <div class="stats" id="stats">
+        <div class="stat-group">
+            <h4>Connection</h4>
+            <div class="stat-item">
+                <span>Status:</span>
+                <span id="statStatus">Not connected</span>
+            </div>
+            <div class="stat-item">
+                <span>Uptime:</span>
+                <span id="statUptime">0s</span>
+            </div>
+            <div class="stat-item">
+                <span>Reconnects:</span>
+                <span id="statReconnects">0</span>
+            </div>
+        </div>
+
+        <div class="stat-group">
+            <h4>Performance</h4>
+            <div class="stat-item">
+                <span>FPS:</span>
+                <span id="statFps">--</span>
+            </div>
+            <div class="stat-item">
+                <span>Total Frames:</span>
+                <span id="statFrames">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Data Rate:</span>
+                <span id="statDataRate">0 KB/s</span>
+            </div>
+        </div>
+
+        <div class="stat-group">
+            <h4>Stream Info</h4>
+            <div class="stat-item">
+                <span>Resolution:</span>
+                <span id="statResolution">--</span>
+            </div>
+            <div class="stat-item">
+                <span>Quality:</span>
+                <span id="statQuality">--</span>
+            </div>
+            <div class="stat-item">
+                <span>Expected FPS:</span>
+                <span id="statExpectedFps">30</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    class WebGLRenderer {
+        constructor(container) {
+            this.canvas = document.createElement('canvas');
+            this.canvas.id = 'stream';
+            this.canvas.style.maxWidth = '100%';
+            this.canvas.style.height = 'auto';
+            this.canvas.style.display = 'block';
+
+            this.gl = this.canvas.getContext('webgl2') || this.canvas.getContext('webgl');
+            if (!this.gl) {
+                throw new Error('WebGL not supported');
+            }
+
+            this.setupShaders();
+            this.setupBuffers();
+            this.texture = this.gl.createTexture();
+
+            container.appendChild(this.canvas);
+        }
+
+        setupShaders() {
+            const vertexShaderSource = `
+            attribute vec2 a_position;
+            attribute vec2 a_texCoord;
+            varying vec2 v_texCoord;
+
+            void main() {
+                gl_Position = vec4(a_position, 0.0, 1.0);
+                v_texCoord = a_texCoord;
+            }
+        `;
+
+            const fragmentShaderSource = `
+            precision mediump float;
+            uniform sampler2D u_image;
+            varying vec2 v_texCoord;
+
+            // Optional: Add some GPU-accelerated effects
+            uniform float u_brightness;
+            uniform float u_contrast;
+            uniform float u_saturation;
+
+            void main() {
+                vec4 color = texture2D(u_image, v_texCoord);
+
+                // GPU-accelerated color adjustments
+                color.rgb = (color.rgb - 0.5) * u_contrast + 0.5;
+                color.rgb = color.rgb + u_brightness;
+
+                // Simple saturation adjustment
+                float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                color.rgb = mix(vec3(gray), color.rgb, u_saturation);
+
+                gl_FragColor = color;
+            }
+        `;
+
+            this.program = this.createProgram(vertexShaderSource, fragmentShaderSource);
+            this.gl.useProgram(this.program);
+
+            // Get attribute and uniform locations
+            this.positionLocation = this.gl.getAttribLocation(this.program, 'a_position');
+            this.texCoordLocation = this.gl.getAttribLocation(this.program, 'a_texCoord');
+            this.imageLocation = this.gl.getUniformLocation(this.program, 'u_image');
+            this.brightnessLocation = this.gl.getUniformLocation(this.program, 'u_brightness');
+            this.contrastLocation = this.gl.getUniformLocation(this.program, 'u_contrast');
+            this.saturationLocation = this.gl.getUniformLocation(this.program, 'u_saturation');
+        }
+
+        createShader(type, source) {
+            const shader = this.gl.createShader(type);
+            this.gl.shaderSource(shader, source);
+            this.gl.compileShader(shader);
+
+            if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+                console.error('Shader compile error:', this.gl.getShaderInfoLog(shader));
+                this.gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        createProgram(vertexSource, fragmentSource) {
+            const vertexShader = this.createShader(this.gl.VERTEX_SHADER, vertexSource);
+            const fragmentShader = this.createShader(this.gl.FRAGMENT_SHADER, fragmentSource);
+
+            const program = this.gl.createProgram();
+            this.gl.attachShader(program, vertexShader);
+            this.gl.attachShader(program, fragmentShader);
+            this.gl.linkProgram(program);
+
+            if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
+                console.error('Program link error:', this.gl.getProgramInfoLog(program));
+                return null;
+            }
+            return program;
+        }
+
+        setupBuffers() {
+            // Create rectangle covering the entire canvas
+            const positions = new Float32Array([
+                -1, -1,  // bottom left
+                1, -1,  // bottom right
+                -1,  1,  // top left
+                1,  1,  // top right
+            ]);
+
+            const texCoords = new Float32Array([
+                0, 1,    // bottom left
+                1, 1,    // bottom right
+                0, 0,    // top left
+                1, 0,    // top right
+            ]);
+
+            // Position buffer
+            this.positionBuffer = this.gl.createBuffer();
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.STATIC_DRAW);
+
+            // Texture coordinate buffer
+            this.texCoordBuffer = this.gl.createBuffer();
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.texCoordBuffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, texCoords, this.gl.STATIC_DRAW);
+        }
+
+        renderFrame(imageElement) {
+            // Update canvas size to match image
+            this.canvas.width = imageElement.naturalWidth || imageElement.width;
+            this.canvas.height = imageElement.naturalHeight || imageElement.height;
+
+            this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+
+            // Upload image to GPU texture
+            this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+            this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, imageElement);
+
+            // Set texture parameters for smooth scaling
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+
+            // Set uniforms (you can make these configurable)
+            this.gl.uniform1f(this.brightnessLocation, 0.0);  // -1 to 1
+            this.gl.uniform1f(this.contrastLocation, 1.0);    // 0 to 2
+            this.gl.uniform1f(this.saturationLocation, 1.0);  // 0 to 2
+
+            // Bind attributes
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+            this.gl.enableVertexAttribArray(this.positionLocation);
+            this.gl.vertexAttribPointer(this.positionLocation, 2, this.gl.FLOAT, false, 0, 0);
+
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.texCoordBuffer);
+            this.gl.enableVertexAttribArray(this.texCoordLocation);
+            this.gl.vertexAttribPointer(this.texCoordLocation, 2, this.gl.FLOAT, false, 0, 0);
+
+            // Draw
+            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        setImageAdjustments(brightness = 0, contrast = 1, saturation = 1) {
+            this.gl.useProgram(this.program);
+            this.gl.uniform1f(this.brightnessLocation, brightness);
+            this.gl.uniform1f(this.contrastLocation, contrast);
+            this.gl.uniform1f(this.saturationLocation, saturation);
+        }
+
+        destroy() {
+            if (this.gl) {
+                this.gl.deleteProgram(this.program);
+                this.gl.deleteBuffer(this.positionBuffer);
+                this.gl.deleteBuffer(this.texCoordBuffer);
+                this.gl.deleteTexture(this.texture);
+            }
+        }
+    }
+
+    class CameraStreamer {
+        constructor() {
+            // WebSocket connection
+            this.ws = null;
+            this.isStreaming = false;
+            this.webglRenderer = null;
+            this.useWebGL = true;
+
+            // Simple counters
+            this.totalFrames = 0;
+            this.reconnectCount = 0;
+
+            // FPS calculation
+            this.currentSecondFrames = 0;
+            this.displayFps = 0;
+            this.lastFpsUpdate = 0;
+
+            // Data rate calculation
+            this.currentSecondBytes = 0;
+            this.displayDataRate = 0;
+            this.lastDataRateUpdate = 0;
+
+            // Connection timing
+            this.connectionStartTime = 0;
+
+            // Hidden image element for WebGL
+            this.hiddenImage = new Image();
+            this.hiddenImage.style.display = 'none';
+            document.body.appendChild(this.hiddenImage);
+
+            this.setupEventListeners();
+            this.startPeriodicUpdates();
+            this.initWebGL();
+        }
+
+        initWebGL() {
+            try {
+                const container = document.querySelector('.video-container');
+                this.webglRenderer = new WebGLRenderer(container);
+                console.log('WebGL renderer initialized successfully');
+
+                // Add image adjustment controls
+                this.addImageControls();
+            } catch (error) {
+                console.warn('WebGL not available, falling back to regular img element:', error);
+                this.useWebGL = false;
+                this.createFallbackImage();
+            }
+        }
+
+        addImageControls() {
+            const controls = document.querySelector('.controls');
+            const imageControlsHTML = `
+            <div class="control-group">
+                <label>Brightness:</label>
+                <input type="range" id="brightness" min="-0.5" max="0.5" step="0.1" value="0">
+            </div>
+            <div class="control-group">
+                <label>Contrast:</label>
+                <input type="range" id="contrast" min="0.5" max="2" step="0.1" value="1">
+            </div>
+            <div class="control-group">
+                <label>Saturation:</label>
+                <input type="range" id="saturation" min="0" max="2" step="0.1" value="1">
+            </div>
+        `;
+            controls.insertAdjacentHTML('beforeend', imageControlsHTML);
+
+            // Add event listeners
+            ['brightness', 'contrast', 'saturation'].forEach(control => {
+                document.getElementById(control).addEventListener('input', () => {
+                    this.updateImageAdjustments();
+                });
+            });
+        }
+
+        updateImageAdjustments() {
+            if (this.webglRenderer) {
+                const brightness = parseFloat(document.getElementById('brightness').value);
+                const contrast = parseFloat(document.getElementById('contrast').value);
+                const saturation = parseFloat(document.getElementById('saturation').value);
+
+                this.webglRenderer.setImageAdjustments(brightness, contrast, saturation);
+            }
+        }
+
+        createFallbackImage() {
+            const container = document.querySelector('.video-container');
+            const img = document.createElement('img');
+            img.id = 'stream';
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.display = 'none';
+            img.alt = 'Camera Stream';
+            container.appendChild(img);
+        }
+
+        setupEventListeners() {
+            document.getElementById('toggleStream').addEventListener('click', () => {
+                this.isStreaming ? this.stop() : this.start();
+            });
+
+            document.getElementById('quality').addEventListener('change', (e) => {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.sendMessage('setQuality', e.target.value);
+                    this.updateExpectedFps();
+                }
+            });
+
+            document.getElementById('fps').addEventListener('change', (e) => {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.sendMessage('setFps', parseInt(e.target.value));
+                }
+                this.updateExpectedFps();
+            });
+
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && this.isStreaming &&
+                    this.ws && this.ws.readyState === WebSocket.CLOSED) {
+                    console.log('Page visible again, reconnecting...');
+                    setTimeout(() => this.start(), 1000);
+                }
+            });
+        }
+
+        start() {
+            const serverUrl = document.getElementById('serverUrl').value.trim();
+            if (!serverUrl) {
+                this.showError('Please enter a server URL');
+                return;
+            }
+
+            this.resetCounters();
+            this.connectionStartTime = Date.now();
+
+            const quality = document.getElementById('quality').value;
+            const fps = document.getElementById('fps').value;
+
+            const url = new URL(serverUrl);
+            url.searchParams.set('quality', quality);
+            url.searchParams.set('fps', fps);
+
+            this.ws = new WebSocket(url.toString());
+            this.ws.binaryType = 'arraybuffer';
+
+            this.ws.onopen = () => {
+                this.isStreaming = true;
+                this.updateStatus('connected', 'Connected');
+                this.hideError();
+                this.showStream();
+                console.log('WebSocket connected to', url.toString());
+            };
+
+            this.ws.onmessage = (event) => {
+                if (typeof event.data === 'string') {
+                    this.handleTextMessage(event.data);
+                } else {
+                    this.handleFrame(event.data);
+                }
+            };
+
+            this.ws.onclose = (event) => {
+                this.isStreaming = false;
+                this.updateStatus('disconnected', `Disconnected (${event.code})`);
+                this.hideStream();
+
+                if (event.code !== 1000 && event.code !== 1001) {
+                    this.reconnectCount++;
+                    this.showError(`Connection lost: ${event.reason || 'Network error'}`);
+                }
+
+                console.log('WebSocket disconnected:', event.code, event.reason);
+            };
+
+            this.ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                this.showError('Connection error - check server URL and network');
+                this.updateStatus('disconnected', 'Error');
+            };
+
+            this.updateStatus('connecting', 'Connecting...');
+        }
+
+        stop() {
+            if (this.ws) {
+                this.ws.close(1000, 'User disconnect');
+            }
+        }
+
+        handleTextMessage(data) {
+            try {
+                const message = JSON.parse(data);
+                if (message.type === 'metadata') {
+                    console.log('Stream metadata:', message.data);
+                    this.handleMetadata(message.data);
+                }
+            } catch (e) {
+                console.warn('Failed to parse message:', e);
+            }
+        }
+
+        handleFrame(arrayBuffer) {
+            const now = Date.now();
+
+            this.totalFrames++;
+            this.currentSecondFrames++;
+            this.currentSecondBytes += arrayBuffer.byteLength;
+
+            if (now - this.lastFpsUpdate >= 1000) {
+                this.displayFps = this.currentSecondFrames;
+                this.currentSecondFrames = 0;
+                this.lastFpsUpdate = now;
+            }
+
+            if (now - this.lastDataRateUpdate >= 1000) {
+                this.displayDataRate = Math.round(this.currentSecondBytes / 1024);
+                this.currentSecondBytes = 0;
+                this.lastDataRateUpdate = now;
+            }
+
+            this.displayFrame(arrayBuffer);
+            this.updatePerformanceIndicator();
+        }
+
+        displayFrame(arrayBuffer) {
+            const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+            const url = URL.createObjectURL(blob);
+
+            if (this.useWebGL && this.webglRenderer) {
+                // Use WebGL rendering
+                this.hiddenImage.onload = () => {
+                    this.webglRenderer.renderFrame(this.hiddenImage);
+                    URL.revokeObjectURL(url);
+                };
+                this.hiddenImage.src = url;
+            } else {
+                // Fallback to regular img element
+                const img = document.getElementById('stream');
+                const oldUrl = img.src;
+                img.src = url;
+                if (oldUrl && oldUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(oldUrl);
+                }
+            }
+        }
+
+        updatePerformanceIndicator() {
+            const perfFps = document.getElementById('perfFps');
+            const perfIndicator = document.getElementById('perfIndicator');
+
+            perfFps.textContent = this.displayFps;
+
+            const expectedFps = parseInt(document.getElementById('fps').value);
+            const fpsRatio = this.displayFps / expectedFps;
+
+            perfIndicator.className = 'performance-indicator ';
+            if (fpsRatio >= 0.9) {
+                perfIndicator.className += 'good';
+            } else if (fpsRatio >= 0.7) {
+                perfIndicator.className += 'warning';
+            } else {
+                perfIndicator.className += 'bad';
+            }
+        }
+
+        handleMetadata(metadata) {
+            document.getElementById('statResolution').textContent =
+                `${metadata.width}x${metadata.height}`;
+            document.getElementById('statQuality').textContent =
+                metadata.quality || '--';
+        }
+
+        sendMessage(type, data) {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({ type, [type.replace('set', '').toLowerCase()]: data }));
+            }
+        }
+
+        resetCounters() {
+            this.totalFrames = 0;
+            this.currentSecondFrames = 0;
+            this.displayFps = 0;
+            this.lastFpsUpdate = Date.now();
+            this.currentSecondBytes = 0;
+            this.displayDataRate = 0;
+            this.lastDataRateUpdate = Date.now();
+        }
+
+        updateExpectedFps() {
+            const expectedFps = document.getElementById('fps').value;
+            document.getElementById('statExpectedFps').textContent = expectedFps;
+            document.getElementById('statQuality').textContent =
+                document.getElementById('quality').value;
+        }
+
+        showStream() {
+            document.getElementById('toggleStream').textContent = 'Stop Stream';
+            document.getElementById('placeholder').style.display = 'none';
+
+            if (this.useWebGL) {
+                this.webglRenderer.canvas.style.display = 'block';
+            } else {
+                document.getElementById('stream').style.display = 'block';
+            }
+
+            document.getElementById('perfIndicator').style.display = 'block';
+        }
+
+        hideStream() {
+            document.getElementById('toggleStream').textContent = 'Start Stream';
+
+            if (this.useWebGL) {
+                this.webglRenderer.canvas.style.display = 'none';
+            } else {
+                document.getElementById('stream').style.display = 'none';
+            }
+
+            document.getElementById('perfIndicator').style.display = 'none';
+            document.getElementById('placeholder').style.display = 'block';
+        }
+
+        updateStatus(className, text) {
+            const status = document.getElementById('status');
+            status.className = `status ${className}`;
+            status.textContent = text;
+        }
+
+        showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        startPeriodicUpdates() {
+            setInterval(() => {
+                this.updateStatsDisplay();
+            }, 1000);
+        }
+
+        updateStatsDisplay() {
+            document.getElementById('statStatus').textContent =
+                this.isStreaming ? 'Streaming' : 'Not connected';
+
+            if (this.isStreaming && this.connectionStartTime) {
+                const uptime = Math.floor((Date.now() - this.connectionStartTime) / 1000);
+                document.getElementById('statUptime').textContent = `${uptime}s`;
+            } else {
+                document.getElementById('statUptime').textContent = '0s';
+            }
+
+            document.getElementById('statFps').textContent = this.displayFps;
+            document.getElementById('statFrames').textContent = this.totalFrames;
+            document.getElementById('statReconnects').textContent = this.reconnectCount;
+            document.getElementById('statDataRate').textContent = `${this.displayDataRate} KB/s`;
+
+            this.updateExpectedFps();
+        }
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('Initializing GPU-Accelerated Camera Streamer...');
+        new CameraStreamer();
+    });
+</script>
+</body>
+</html>

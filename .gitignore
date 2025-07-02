@@ -1,0 +1,5 @@
+node_modules
+include
+cmake_build_debug
+.idea
+build

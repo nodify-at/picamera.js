@@ -1,0 +1,104 @@
+{
+  "name": "@nodify/picamera.js",
+  "version": "1.0.0",
+  "description": "High-performance, low-CPU camera capture module using libcamera for Raspberry Pi",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "type": "module",
+  "files": [
+    "lib/**/*",
+    "prebuilds/**/*",
+    "binding.gyp",
+    "src/**/*",
+    "include/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "binary": {
+    "module_name": "picamera",
+    "module_path": "./prebuilds/{platform}-{arch}/",
+    "host": "https://github.com/your-username/picamera.js/releases/download/",
+    "remote_path": "v{version}",
+    "package_name": "{module_name}-v{version}-{platform}-{arch}.tar.gz",
+    "napi_versions": [
+      9
+    ]
+  },
+  "scripts": {
+    "build": "tsc && node-gyp rebuild",
+    "build:ts": "tsc",
+    "build:native": "node-gyp rebuild",
+    "build:release": "tsc && node-gyp rebuild --release",
+    "clean": "node-gyp clean && rm -rf lib prebuilds",
+    "configure": "node-gyp configure",
+    "test": "node lib/example.js",
+    "prebuild": "prebuild --runtime napi --target 9 --strip --verbose",
+    "prebuild:upload": "prebuild --runtime napi --target 9 --strip --upload-all ${GITHUB_TOKEN}",
+    "prebuild:download": "prebuild-install --runtime napi || npm run build:native",
+    "prepare": "npm run build:ts",
+    "prepublishOnly": "npm run clean && npm run build:release && npm run prebuild",
+    "install": "prebuild-install --runtime napi || node-gyp rebuild"
+  },
+  "keywords": [
+    "camera",
+    "libcamera",
+    "raspberry-pi",
+    "raspberry-pi-5",
+    "video",
+    "streaming",
+    "low-cpu",
+    "zero-copy",
+    "arm64",
+    "napi",
+    "addon"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/picamera.js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/picamera.js/issues"
+  },
+  "homepage": "https://github.com/your-username/picamera.js#readme",
+  "gypfile": true,
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.4.0",
+    "sharp": "^0.34.2",
+    "ws": "^8.18.3",
+    "prebuild-install": "^7.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@types/bindings": "^1.5.5",
+    "@types/node": "^24.0.10",
+    "@types/onoff": "^4.1.0",
+    "@types/ws": "^8.18.1",
+    "bindings": "^1.5.0",
+    "eslint": "^9.30.1",
+    "eslint-config-prettier": "^10.1.2",
+    "globals": "^16.0.0",
+    "node-gyp": "^11.2.0",
+    "prebuild": "^13.0.1",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.31.0"
+  },
+  "peerDependencies": {
+    "libcamera": ">=0.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
