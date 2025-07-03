@@ -1,0 +1,96 @@
+name: Build and Publish picamera.js
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  build-native:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - pi_version: "Pi 4/5"
+            base_image: raspios_lite_arm64:latest
+            cpu: cortex-a53
+            arch: arm64
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build on Raspberry Pi OS - ${{ matrix.pi_version }}
+        uses: pguyot/arm-runner-action@v2
+        with:
+          base_image: ${{ matrix.base_image }}
+          cpu: ${{ matrix.cpu }}
+          bind_mount_repository: true
+          image_additional_mb: 4096
+          commands: |
+            # Show system info
+            echo "Building for ${{ matrix.pi_version }}"
+            uname -a
+            cat /etc/os-release
+            
+            # Install system dependencies
+            sudo apt-get update
+            sudo apt-get install -y \
+              build-essential \
+              cmake \
+              libcamera-dev \
+              libcamera-tools \
+              python3-libcamera \
+              nodejs \
+              npm
+            
+            # Update npm
+            sudo npm install -g npm@latest
+            
+            # Install Node dependencies
+            npm ci
+            
+            # Build TypeScript
+            npm run build
+            
+            # Build native module with prebuildify
+            npm run clean
+            npx prebuildify --napi --strip --arch ${{ matrix.arch }} --tag-armv
+            
+            # Test the build
+            node -e "const cam = require('.'); console.log('Module loaded:', cam);"
+            
+      - name: Upload prebuilds
+        uses: actions/upload-artifact@v4
+        with:
+          name: prebuilds-${{ matrix.arch }}
+          path: prebuilds/
+
+  publish:
+    needs: build-native
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Download all prebuilds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: prebuilds-*
+          merge-multiple: true
+          path: prebuilds/
+      
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+      
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
