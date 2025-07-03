@@ -1,11 +1,23 @@
 // index.ts - Clean and simple exports
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import bindings from 'bindings'
+// Type declaration for node-gyp-build
+type NodeGypBuild = (dir: string) => any;
+
+// Create require for CommonJS modules
+const require = createRequire(import.meta.url);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Load node-gyp-build and cast it
+const nodeGypBuild = require('node-gyp-build') as NodeGypBuild;
+
 import { Camera } from './camera.js'
 import { CameraBuilder } from './builder.js'
 import type { NativeAddon, SensorInfo } from './types.js'
 
-const addon = bindings('picamera.js') as NativeAddon
+const addon = nodeGypBuild(join(__dirname, '..')) as NativeAddon
 
 export { Camera, CameraBuilder }
 export * from './types.js'

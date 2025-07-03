@@ -13,8 +13,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.prod.json",
     "install": "node-gyp-build",
+    "build": "tsc -p tsconfig.prod.json",
     "clean": "node-gyp clean && rm -rf prebuilds",
     "configure": "node-gyp configure",
     "prebuild": "prebuildify --napi --strip --tag-armv",
@@ -59,6 +59,7 @@
   },
   "dependencies": {
     "node-addon-api": "^8.4.0",
+    "node-gyp-build": "^4.8.4",
     "sharp": "^0.34.2",
     "ws": "^8.18.3"
   },

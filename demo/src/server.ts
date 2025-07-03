@@ -2,7 +2,7 @@
 import { WebSocket, WebSocketServer } from 'ws'
 import { createServer, IncomingMessage } from 'http'
 import { parse } from 'url'
-import { AfMode, AwbMode, builder, Camera, ExposureMode, type FrameData } from './index.js'
+import { AfMode, AwbMode, builder, Camera, ExposureMode, type FrameData } from '@nodify_at/picamera.js'
 
 interface ClientConnection {
     id: string
