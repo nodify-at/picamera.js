@@ -69,7 +69,7 @@ namespace lcam {
             // Set pixel format based on stream type
             switch (appCfg.type) {
                 case StreamType::RGB:
-                    streamCfg.pixelFormat = lc::formats::BGR888;
+                    streamCfg.pixelFormat = lc::formats::RGB888;
                     break;
                 case StreamType::JPEG:
                     streamCfg.pixelFormat = lc::formats::YUV420;

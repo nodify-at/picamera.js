@@ -5,7 +5,12 @@
 [![Node.js Version](https://img.shields.io/node/v/@nodify/picamera.js.svg)](https://nodejs.org)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%205-ff69b4.svg)](https://www.raspberrypi.com/)
 
-High-performance camera module for Raspberry Pi 5 using native libcamera bindings. Zero-copy memory architecture and hardware-accelerated JPEG encoding for efficient camera capture and streaming.
+
+
+High-performance camera module for Raspberry Pi 5 using native libcamera bindings. 
+Zero-copy memory architecture and hardware-accelerated JPEG encoding for 
+efficient camera capture and streaming.
+#### Experimental - Use at your own risk
 
 ### 🎯 Why picamera.js?
 

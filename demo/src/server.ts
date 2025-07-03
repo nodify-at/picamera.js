@@ -1,6 +1,6 @@
 // server.ts
 import { WebSocket, WebSocketServer } from 'ws'
-import { createServer, IncomingMessage } from 'http'
+import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { parse } from 'url'
 import { AfMode, AwbMode, builder, Camera, ExposureMode, type FrameData } from '@nodify_at/picamera.js'
 
@@ -31,6 +31,10 @@ interface FrameStats {
 }
 
 class WebSocketJpegStreamer {
+    private static readonly VALID_QUALITY_LEVELS = ['high', 'medium', 'low']
+    private static readonly DEFAULT_FPS = 30
+    private static readonly MIN_FPS = 1
+
     private readonly server: ReturnType<typeof createServer>
     private wss: WebSocketServer
     private camera: Camera | null = null
@@ -115,20 +119,38 @@ class WebSocketJpegStreamer {
         })
     }
 
-    private handleClientMessage(client: ClientConnection, message: any): void {
+    private handleClientMessage(
+        client: ClientConnection,
+        message: { type: string; quality?: string; fps?: number },
+    ): void {
         switch (message.type) {
             case 'setQuality':
-                if (['high', 'medium', 'low'].includes(message.quality)) {
-                    client.quality = message.quality
-                    console.log(`Client ${client.id} changed quality to ${message.quality}`)
-                }
+                this.handleQualityChange(client, message.quality)
                 break
             case 'setFps':
-                const fps = Math.min(Math.max(1, Number(message.fps) || 30), this.config.cameraFps)
-                client.maxFps = fps
-                console.log(`Client ${client.id} changed FPS to ${fps}`)
+                this.handleFpsChange(client, message.fps)
                 break
         }
+    }
+
+    private handleQualityChange(client: ClientConnection, quality?: string): void {
+        if (quality && WebSocketJpegStreamer.VALID_QUALITY_LEVELS.includes(quality)) {
+            client.quality = quality as 'high' | 'medium' | 'low'
+            this.logClientSettingChange(client.id, 'quality', quality)
+        }
+    }
+
+    private handleFpsChange(client: ClientConnection, fps?: number): void {
+        const validatedFps = Math.min(
+            Math.max(WebSocketJpegStreamer.MIN_FPS, Number(fps) || WebSocketJpegStreamer.DEFAULT_FPS),
+            this.config.cameraFps,
+        )
+        client.maxFps = validatedFps
+        this.logClientSettingChange(client.id, 'FPS', validatedFps.toString())
+    }
+
+    private logClientSettingChange(clientId: string, setting: string, value: string): void {
+        console.log(`Client ${clientId} changed ${setting} to ${value}`)
     }
 
     private setupHealthCheck(): void {
@@ -159,7 +181,7 @@ class WebSocketJpegStreamer {
         }, 10000)
     }
 
-    private handleHttpRequest(req: IncomingMessage, res: any): void {
+    private handleHttpRequest(req: IncomingMessage, res: ServerResponse): void {
         const parsedUrl = parse(req.url || '', true)
 
         switch (parsedUrl.pathname) {
@@ -182,7 +204,7 @@ class WebSocketJpegStreamer {
         }
     }
 
-    private serveStats(res: any): void {
+    private serveStats(res: ServerResponse): void {
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
         res.end(
             JSON.stringify(
@@ -207,7 +229,7 @@ class WebSocketJpegStreamer {
         return Date.now().toString(36) + Math.random().toString(36).substr(2)
     }
 
-    private sendMessage(client: ClientConnection, type: string, data: any): void {
+    private sendMessage(client: ClientConnection, type: string, data: unknown): void {
         if (client.ws.readyState === WebSocket.OPEN) {
             try {
                 client.ws.send(JSON.stringify({ type, data }))
@@ -262,7 +284,7 @@ class WebSocketJpegStreamer {
         this.lastStatsTime = now
     }
 
-    public async start(): Promise<void> {
+    async start(): Promise<void> {
         try {
             // Initialize camera
             this.camera = builder()
@@ -311,7 +333,7 @@ class WebSocketJpegStreamer {
         }
     }
 
-    public async stop(): Promise<void> {
+    async stop(): Promise<void> {
         console.log('Stopping server...')
 
         // Close all client connections
@@ -337,10 +359,6 @@ class WebSocketJpegStreamer {
             })
         })
     }
-
-    public getStats(): FrameStats & { clients: number } {
-        return { ...this.frameStats, clients: this.clients.size }
-    }
 }
 
 // Server configuration
@@ -357,7 +375,7 @@ const config: ServerConfig = {
 const server = new WebSocketJpegStreamer(config)
 
 // Graceful shutdown handling
-const shutdown = async (signal: string) => {
+const shutdown = async (signal: string): Promise<void> => {
     console.log(`\nReceived ${signal}, shutting down gracefully...`)
     try {
         await server.stop()
@@ -372,7 +390,7 @@ process.on('SIGINT', () => shutdown('SIGINT'))
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('uncaughtException', error => {
     console.error('Uncaught exception:', error)
-    shutdown('UNCAUGHT_EXCEPTION')
+    void shutdown('UNCAUGHT_EXCEPTION')
 })
 
 // Start server

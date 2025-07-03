@@ -1,0 +1,29 @@
+{
+  "name": "demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "npx tsx src/server.ts",
+    "install:cuda": "build-opencv --version 4.5.5 --flags=\"-DWITH_CUDA=ON -DWITH_CUDNN=ON -DOPENCV_DNN_CUDA=ON -DCUDA_FAST_MATH=ON\" build"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@nodify_at/picamera.js": "^1.0.4",
+    "ws": "^8.18.3",
+    "@u4/opencv4nodejs": "^7.1.2"
+  },
+  "opencv4nodejs": {
+    "disableAutoBuild": 1,
+    "opencvIncludeDir": "/usr/include/opencv4",
+    "opencvLibDir": "/usr/lib/aarch64-linux-gnu",
+    "opencvBinDir": "/usr/bin"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "@types/node": "24.0.10",
+    "typescript": "^5.8.3"
+  }
+}
