@@ -1,5 +1,5 @@
 node_modules
-include
+/include
 cmake_build_debug
 .idea
 build
