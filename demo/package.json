@@ -13,13 +13,6 @@
   "dependencies": {
     "@nodify_at/picamera.js": "^1.0.4",
     "ws": "^8.18.3",
-    "@u4/opencv4nodejs": "^7.1.2"
-  },
-  "opencv4nodejs": {
-    "disableAutoBuild": 1,
-    "opencvIncludeDir": "/usr/include/opencv4",
-    "opencvLibDir": "/usr/lib/aarch64-linux-gnu",
-    "opencvBinDir": "/usr/bin"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",
